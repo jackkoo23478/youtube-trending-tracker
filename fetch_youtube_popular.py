@@ -1,5 +1,5 @@
 """
-每星期捉印度、美國、印尼、巴西、香港「過去 7 日上載、觀看數最多」嘅 5 條 YouTube 片，存入 Notion。
+每星期捉印度、美國、印尼、巴西、香港最熱門嘅 5 條 YouTube 片，存入 Notion。
 
 Setup (一次就得):
   pip install requests
@@ -16,7 +16,7 @@ Run:
 
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import requests
 
@@ -26,12 +26,6 @@ NOTION_DATABASE_ID = "0ed6c81ed2c846199c6d23976ba89e25"   # 「YouTube 每週熱
 
 REGIONS = {"IN": "印度", "US": "美國", "ID": "印尼", "BR": "巴西", "HK": "香港"}
 TOP_N = 5
-DAYS_BACK = 7        # 只計過去幾多日上載嘅片
-CANDIDATES = 15      # search 先攞幾多條候選，再按真實觀看數揀頭 TOP_N 條
-
-# regionCode 只代表「呢個地區睇得到」，唔代表係當地片。
-# 加埋語言偏好，結果會比較貼近當地人睇嘅片。
-REGION_LANGUAGE = {"IN": "hi", "US": "en", "ID": "id", "BR": "pt", "HK": "zh-Hant"}
 
 # YouTube categoryId -> 你 Notion 入面嘅「類型」
 CATEGORY_MAP = {
@@ -63,41 +57,19 @@ def get_type(snippet: dict) -> str:
 
 
 def fetch_top(region: str) -> list[dict]:
-    """過去 DAYS_BACK 日上載、喺呢個地區觀看數最多嘅 TOP_N 條片。"""
-    since = (datetime.now(timezone.utc) - timedelta(days=DAYS_BACK)).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    # 1) search.list 揾候選片 (每次 100 quota)
-    search = requests.get(
-        "https://www.googleapis.com/youtube/v3/search",
+    resp = requests.get(
+        "https://www.googleapis.com/youtube/v3/videos",
         params={
-            "part": "id",
-            "type": "video",
-            "order": "viewCount",
-            "publishedAfter": since,
+            "part": "snippet,statistics",
+            "chart": "mostPopular",
             "regionCode": region,
-            "relevanceLanguage": REGION_LANGUAGE.get(region, ""),
-            "maxResults": CANDIDATES,
+            "maxResults": TOP_N,
             "key": YT_API_KEY,
         },
         timeout=30,
     )
-    search.raise_for_status()
-    ids = [it["id"]["videoId"] for it in search.json().get("items", [])]
-    if not ids:
-        return []
-
-    # 2) videos.list 攞真實觀看數同分類 (1 quota)
-    videos = requests.get(
-        "https://www.googleapis.com/youtube/v3/videos",
-        params={"part": "snippet,statistics", "id": ",".join(ids), "key": YT_API_KEY},
-        timeout=30,
-    )
-    videos.raise_for_status()
-    items = videos.json().get("items", [])
-
-    # search 嘅排序只係大約，用真實觀看數重新排
-    items.sort(key=lambda it: int(it.get("statistics", {}).get("viewCount", 0)), reverse=True)
-    return items[:TOP_N]
+    resp.raise_for_status()
+    return resp.json().get("items", [])
 
 
 def to_int(value):
