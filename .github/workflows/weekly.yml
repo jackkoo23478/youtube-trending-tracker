@@ -1,0 +1,25 @@
+name: Weekly YouTube top videos
+
+on:
+  schedule:
+    # 每個星期一 香港時間 09:17 (UTC 01:17)
+    - cron: "17 1 * * 1"
+  workflow_dispatch:   # 可以喺 Actions 頁手動撳 "Run workflow"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Fetch top videos and save to Notion
+        env:
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python fetch_youtube_popular.py
