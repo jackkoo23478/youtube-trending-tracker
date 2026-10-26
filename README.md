@@ -1,7 +1,7 @@
 # YouTube Trending Tracker
 
-Every Monday, a GitHub Actions job fetches the top 5 most popular YouTube videos in
-India, the US, Indonesia, Brazil and Hong Kong, tags each with a type (AI, comedy, music, gaming…),
+Every Monday, a GitHub Actions job fetches the 5 most-viewed YouTube videos uploaded in the
+past 7 days for India, the US, Indonesia, Brazil and Hong Kong, tags each with a type (AI, comedy, music, gaming…),
 and saves them to a Notion database.
 
 ## Setup
@@ -16,10 +16,11 @@ and saves them to a Notion database.
 
 ## Notes
 
-- Uses `videos.list?chart=mostPopular`. Since YouTube removed its Trending page (July 2025),
-  this chart mostly reflects trending music, movies and gaming.
+- Uses `search.list` (`order=viewCount`, `publishedAfter` = 7 days ago, `regionCode` +
+  `relevanceLanguage`) to get 15 candidates, then `videos.list` for real stats, re-sorted by views.
+- `regionCode` means "viewable in that region", not "made there"; the language hint keeps results local.
 - "AI" is detected by keywords in the title/tags; other types come from YouTube's category.
-- Both APIs are free; one run uses about 5 of the 10,000 daily YouTube quota units.
+- Both APIs are free; one run uses about 505 of the 10,000 daily YouTube quota units.
 
 ## Run locally
 
